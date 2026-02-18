@@ -4,12 +4,13 @@ import sys
 import os
 import streamlit as st
 
-# ======================================
-# FIX para encontrar lib/ en Streamlit Cloud
-# ======================================
+# ======================
+# FIX: Asegurar que lib/ se pueda importar
+# ======================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, "lib"))
+
 for root, dirs, _ in os.walk(BASE_DIR):
     if "lib" in dirs:
         sys.path.insert(0, os.path.join(root, "lib"))
@@ -20,9 +21,9 @@ from lib.data_loader import load_csv
 from lib.ui import company_row, render_company_panel
 
 
-# ======================================
-# CONFIG & CSS
-# ======================================
+# ======================
+# CONFIG + CSS ANA
+# ======================
 st.set_page_config(page_title="Fornecedores ANA", layout="wide")
 
 st.markdown("""
@@ -49,9 +50,9 @@ h2, h3, h4 { color: #003087 !important; font-weight: 600; }
 """, unsafe_allow_html=True)
 
 
-# ======================================
-# STATE
-# ======================================
+# ======================
+# SESSION STATE
+# ======================
 if "page" not in st.session_state:
     st.session_state.page = "home"
 
@@ -61,28 +62,34 @@ if "macro" not in st.session_state:
 if "profile_row_index" not in st.session_state:
     st.session_state.profile_row_index = None
 
+
+# ======================
+# LOAD DATA
+# ======================
 df = load_csv("data/fornecedores.csv")
 
 
-# ==========================================================
-# LAYOUT: PANEL IZQUIERDA (contenido) + PANEL DERECHA (perfil)
-# ==========================================================
+# ======================
+# LAYOUT: IZQUIERDA + DERECHA (FIJO)
+# ======================
 left, right = st.columns([0.65, 0.35], gap="large")
 
-
 # ======================
-# PANEL DERECHA - PERFIL
+# PANEL DERECHO — SIEMPRE EXISTE
 # ======================
 with right:
     if st.session_state.profile_row_index is not None:
         idx = st.session_state.profile_row_index
         if idx in df.index:
             render_company_panel(df.loc[idx])
+    else:
+        # Panel vacío → mantiene layout estable → elimina doble click
+        st.write("")
 
 
-# =======================
-# PANEL IZQUIERDA (PÁGINAS)
-# =======================
+# ======================
+# PANEL IZQUIERDA — NAVEGACIÓN
+# ======================
 with left:
 
     # -------- HOME --------
@@ -93,6 +100,7 @@ with left:
 
         if st.button("⭐ Generalistas", type="primary"):
             st.session_state.page = "generalistas"
+            st.session_state.profile_row_index = None
 
         st.markdown("---")
         st.subheader("Macro‑Especialidades")
@@ -103,6 +111,7 @@ with left:
                 if st.button(macro, key=f"macro_{i}"):
                     st.session_state.page = "macro"
                     st.session_state.macro = macro
+                    st.session_state.profile_row_index = None
 
 
     # -------- MACRO --------
@@ -118,6 +127,7 @@ with left:
         filter_ana = st.checkbox("Mostrar apenas Fornecedores ANA")
 
         for spec in MACRO_MAP[macro]:
+
             subset = df[df[spec] == 1]
             if filter_ana:
                 subset = subset[subset["ANA"] == 1]
@@ -129,8 +139,8 @@ with left:
             for _, row in subset.sort_values("Nome").iterrows():
                 company_row(row, btn_key_suffix=f"{macro}_{spec}")
 
-
         st.markdown("---")
+
         if st.button("⬅ Voltar", key="back_macro_bottom"):
             st.session_state.page = "home"
             st.session_state.profile_row_index = None
@@ -157,9 +167,11 @@ with left:
 
             st.subheader(row["Nome"])
 
+            # Mostrar macro-activas
             macros = [m for m, specs in MACRO_MAP.items() if row[specs].sum() > 0]
             st.write("**Macros:** " + ", ".join(macros))
 
+            # Especialidades por macro
             for m, specs in MACRO_MAP.items():
                 active = [c for c in specs if row[c] == 1]
                 if active:
@@ -169,6 +181,7 @@ with left:
                 st.session_state.profile_row_index = row.name
 
         st.markdown("---")
+
         if st.button("⬅ Voltar", key="back_general_bottom"):
             st.session_state.page = "home"
             st.session_state.profile_row_index = None
