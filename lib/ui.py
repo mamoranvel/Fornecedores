@@ -3,7 +3,7 @@
 import streamlit as st
 
 # ----------------------------
-# Utilidades de formato
+# Utilidades
 # ----------------------------
 def clean(v):
     if v is None:
@@ -19,37 +19,35 @@ def fmt_money(v):
         return ""
     try:
         x = float(s.replace(" ", "").replace(",", "."))
-        # Formato europeo: separador de miles espacio, coma decimal
         return "{:,.2f}".format(x).replace(",", " ").replace(".", ",")
     except:
         return s
 
 def specialties(row):
-    # Import local para evitar ciclos
     from lib.mapping import DESCRICOES
-    act = [c for c in DESCRICOES if int(row.get(c, 0)) == 1]
+    act = [c for c in DESCRICOES if int(row.get(c,0)) == 1]
     act.sort()
     return " - ".join(act)
 
 # ----------------------------
-# Panel derecho (no sidebar)
+# PANEL DERECHO (FIJO, SIN SIDEBAR)
 # ----------------------------
 def render_company_panel(row):
     """
-    Renderiza el panel de perfil en la COLUMNA DERECHA fija (no sidebar).
+    Renderiza panel derecho con datos de empresa.
+    NO cambia el layout → elimina doble-click.
     """
+    # Título
     st.markdown(f"## {clean(row.get('Nome',''))}")
 
-    # Badge ANA
+    # ANA badge
     try:
         ana = int(row.get("ANA", 0))
-    except Exception:
+    except:
         ana = 0
 
     if ana == 1:
         st.markdown("<span class='badge-ana'>Fornecedor ANA</span>", unsafe_allow_html=True)
-    else:
-        st.write("Fornecedor ANA: Não")
 
     # Especialidades
     st.markdown("### Especialidades")
@@ -57,7 +55,7 @@ def render_company_panel(row):
 
     st.markdown("---")
 
-    # Contacto y servicios
+    # Servicios y contacto
     st.write(f"**Serviços:** {clean(row.get('Serviços',''))}")
     st.write(f"**Website:** {clean(row.get('Website',''))}")
     st.write(f"**Email:** {clean(row.get('Email',''))}")
@@ -71,31 +69,30 @@ def render_company_panel(row):
     st.write(f"**Ano:** {clean(row.get('Ano Volume Negócios',''))}")
     st.write(f"**Pessoal Permanente:** {clean(row.get('Pessoal Permamente Total',''))}")
 
-    # Cerrar
-    if st.button("Fechar perfil", key=f"close_{row.name}"):
+    # Botón cerrar
+    if st.button("Fechar perfil"):
         st.session_state.profile_row_index = None
 
+
 # ----------------------------
-# Fila de empresa + botón perfil
+# FILA DE EMPRESA + BOTÓN
 # ----------------------------
 def company_row(row, btn_key_suffix=""):
     """
-    Dibuja una fila con nombre/serviços y botón 'Ver perfil'.
-    Se usa en las listas de Macro/Generalistas.
+    Dibuja una fila de empresa + botón Ver perfil.
     """
-    nome = clean(row.get("Nome",""))
     serv = clean(row.get("Serviços",""))
+    nome = clean(row.get("Nome",""))
 
-    # Badge ANA
     try:
-        ana = int(row.get("ANA", 0))
-    except Exception:
+        ana = int(row.get("ANA",0))
+    except:
         ana = 0
+
     badge = " <span class='badge-ana'>ANA</span>" if ana == 1 else ""
 
-    col1, col2 = st.columns([5, 1])
+    col1, col2 = st.columns([5,1])
     col1.markdown(f"**{nome}** {badge}<br>{serv}", unsafe_allow_html=True)
 
-    # Botón con key única
     if col2.button("Ver perfil", key=f"profile_{row.name}_{btn_key_suffix}"):
         st.session_state.profile_row_index = row.name
