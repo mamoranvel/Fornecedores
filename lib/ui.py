@@ -2,70 +2,57 @@
 
 import streamlit as st
 
-def clean_text(v):
-    if v is None:
-        return ""
+def clean(v):
+    if v is None: return ""
     s = str(v).strip()
     if s.lower() in ("nan", "none", "null"):
         return ""
     return s
 
-def fmt_money_str(v):
-    s = clean_text(v)
-    if not s:
-        return ""
+def fmt_money(v):
+    s = clean(v)
+    if not s: return ""
     try:
         x = float(s.replace(" ", "").replace(",", "."))
         return "{:,.2f}".format(x).replace(",", " ").replace(".", ",")
     except:
         return s
 
-def specialties_codes_line(row):
+def specialties(row):
     from lib.mapping import DESCRICOES
-    active = [c for c in DESCRICOES.keys() if row.get(c,0) == 1]
-    active.sort()
-    return " - ".join(active)
+    act = [c for c in DESCRICOES if row.get(c,0)==1]
+    act.sort()
+    return " - ".join(act)
 
-def show_company_sidebar(row):
+# ==========================================================
+# PANEL DERECHO (NO ES SIDEBAR, ES COLUMNA DERECHA → 0 doble click)
+# ==========================================================
+def render_company_panel(row):
 
-    st.sidebar.header(clean_text(row["Nome"]))
-
-    website  = clean_text(row.get("Website",""))
-    email    = clean_text(row.get("Email",""))
-    phone    = clean_text(row.get("Telefone",""))
-
-    if website: st.sidebar.write(f"**Website:** {website}")
-    if email:   st.sidebar.write(f"**Email:** {email}")
-    if phone:   st.sidebar.write(f"**Telefone:** {phone}")
+    st.markdown(f"## {clean(row['Nome'])}")
 
     if int(row["ANA"]) == 1:
-        st.sidebar.markdown("<span class='badge-ana'>Fornecedor ANA</span>",
-                            unsafe_allow_html=True)
+        st.markdown("<span class='badge-ana'>Fornecedor ANA</span>", unsafe_allow_html=True)
     else:
-        st.sidebar.write("Fornecedor ANA: Não")
+        st.write("Fornecedor ANA: Não")
 
-    st.sidebar.write("**Especialidades:**")
-    st.sidebar.write(specialties_codes_line(row) or "-")
+    st.markdown("### Especialidades")
+    st.write(specialties(row) or "-")
 
-    st.sidebar.markdown("---")
+    st.markdown("---")
 
-    st.sidebar.write(f"**Serviços:** {clean_text(row.get('Serviços',''))}")
+    st.write(f"**Serviços:** {clean(row.get('Serviços',''))}")
 
-    st.sidebar.write(f"**Data de constituição:** {clean_text(row.get('Data de constituição',''))}")
-    st.sidebar.write(f"**Capital Social:** {fmt_money_str(row.get('Capital Social',''))}€")
-    st.sidebar.write(f"**Volume de Negócios:** {fmt_money_str(row.get('Volume de Negócios (€)',''))}€")
-    st.sidebar.write(f"**Pessoal Permanente:** {clean_text(row.get('Pessoal Permamente Total',''))}")
+    st.write(f"**Website:** {clean(row.get('Website',''))}")
+    st.write(f"**Email:** {clean(row.get('Email',''))}")
+    st.write(f"**Telefone:** {clean(row.get('Telefone',''))}")
 
-    if st.sidebar.button("Fechar perfil", key="close_sidebar"):
-        st.session_state.pop("profile_row_index", None)
+    st.markdown("---")
 
-def company_row(row, btn_key_suffix=""):
+    st.write(f"**Capital Social:** {fmt_money(row.get('Capital Social',''))} €")
+    st.write(f"**Volume de Negócios:** {fmt_money(row.get('Volume de Negócios (€)',''))} €")
+    st.write(f"**Ano:** {clean(row.get('Ano Volume Negócios',''))}")
+    st.write(f"**Pessoal Permanente:** {clean(row.get('Pessoal Permamente Total',''))}")
 
-    serv = clean_text(row.get("Serviços",""))
-    badge = " <span class='badge-ana'>ANA</span>" if row["ANA"] == 1 else ""
-
-    col1, col2 = st.columns([5,1])
-    col1.markdown(f"**{row['Nome']}** {badge}<br>{serv}", unsafe_allow_html=True)
-
-    if col2.button("Ver perfil", key=f"profile_{row.name}_{btn_key_suffix}"):
-        st.session_state["profile_row_index"] = row.name
+    if st.button("Fechar perfil"):
+        st.session_state.profile_row_index = None
