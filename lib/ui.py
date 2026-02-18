@@ -2,19 +2,26 @@
 
 import streamlit as st
 
+# ============ Helper ============
+
 def do_rerun():
-    try: st.rerun()
-    except Exception: pass
+    try:
+        st.rerun()
+    except:
+        pass
 
 def clean_text(v):
-    if v is None: return ""
+    if v is None:
+        return ""
     s = str(v).strip()
-    if s.lower() in ("nan", "none", "null"): return ""
+    if s.lower() in ("nan", "none", "null"):
+        return ""
     return s
 
 def fmt_money_str(v):
     s = clean_text(v)
-    if not s: return ""
+    if not s:
+        return ""
     try:
         x = float(s.replace(" ", "").replace(",", "."))
         return "{:,.2f}".format(x).replace(",", " ").replace(".", ",")
@@ -23,9 +30,12 @@ def fmt_money_str(v):
 
 def specialties_codes_line(row):
     from lib.mapping import DESCRICOES
-    active = [c for c in DESCRICOES.keys() if row.get(c, 0) == 1]
+    active = [c for c in DESCRICOES.keys() if int(row.get(c, 0)) == 1]
     active.sort()
     return " - ".join(active)
+
+
+# ============ SIDEBAR PERFIL ============
 
 def show_company_sidebar(row):
 
@@ -56,19 +66,27 @@ def show_company_sidebar(row):
     st.sidebar.write(f"**Volume de Negócios:** {fmt_money_str(row.get('Volume de Negócios (€)',''))}€")
     st.sidebar.write(f"**Pessoal Permanente:** {clean_text(row.get('Pessoal Permamente Total',''))}")
 
-    if st.sidebar.button("Fechar perfil"):
+    if st.sidebar.button("Fechar perfil", key="close_sidebar"):
         if "profile_row_index" in st.session_state:
             st.session_state.pop("profile_row_index")
         do_rerun()
 
-def company_row(row, key=""):
+
+# ============ EMPRESA EN LISTA + BOTÓN VER PERFIL ============
+
+def company_row(row, btn_key_suffix=""):
+    """
+    ESTA ES LA FIRMA CORRECTA:
+    company_row(row, btn_key_suffix="")
+    """
 
     serv = clean_text(row.get("Serviços",""))
     badge = " <span class='badge-ana'>ANA</span>" if row["ANA"] == 1 else ""
 
     col1, col2 = st.columns([5,1])
+
     col1.markdown(f"**{row['Nome']}** {badge}<br>{serv}", unsafe_allow_html=True)
 
-    if col2.button("Ver perfil", key=f"profile_{row.name}_{key}"):
+    if col2.button("Ver perfil", key=f"profile_{row.name}_{btn_key_suffix}"):
         st.session_state["profile_row_index"] = row.name
         do_rerun()
