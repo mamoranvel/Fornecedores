@@ -4,6 +4,9 @@ import sys
 import os
 import streamlit as st
 
+# ======================================
+# FIX para localizar lib/
+# ======================================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, "lib"))
@@ -11,39 +14,30 @@ sys.path.insert(0, os.path.join(BASE_DIR, "lib"))
 for root, dirs, files in os.walk(BASE_DIR):
     if "lib" in dirs:
         lib_path = os.path.join(root, "lib")
-        if lib_path not in sys.path:
-            sys.path.insert(0, lib_path)
+        sys.path.insert(0, lib_path)
         break
 
 from lib.mapping import MACRO_MAP, DESCRICOES
 from lib.data_loader import load_csv
 from lib.ui import company_row, show_company_sidebar
 
+# ======================================
+# CONFIG
+# ======================================
 st.set_page_config(page_title="Fornecedores ANA", layout="wide")
 
 st.markdown("""
 <style>
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-.title-green {
-    color: #7BC242 !important;
-    font-weight: 900 !important;
-    font-size: 3rem !important;
-}
-.badge-ana {
-    background-color: #7BC242;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    margin-left: 6px;
-}
-section[data-testid="stSidebar"] {
-    background-color: #F0F4F8 !important;
-}
+.title-green { color: #7BC242 !important; font-weight: 900 !important; font-size: 3rem !important; }
+.badge-ana { background-color: #7BC242; color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; margin-left: 6px; }
+section[data-testid="stSidebar"] { background-color: #F0F4F8 !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ======================================
 # STATE
+# ======================================
 if "page" not in st.session_state:
     st.session_state.page = "home"
 if "macro" not in st.session_state:
@@ -51,7 +45,19 @@ if "macro" not in st.session_state:
 
 df = load_csv("data/fornecedores.csv")
 
-# HOME
+# ======================================
+# 1) MOSTRAR SIDEBAR ANTES QUE NADA
+# ======================================
+if "profile_row_index" in st.session_state:
+    idx = st.session_state["profile_row_index"]
+    if idx in df.index:
+        show_company_sidebar(df.loc[idx])
+
+# ======================================
+# 2) RENDER DE PÁGINAS
+# ======================================
+
+# -------- HOME --------
 if st.session_state.page == "home":
 
     st.markdown("<h1 class='title-green'>Fornecedores ANA</h1>", unsafe_allow_html=True)
@@ -64,13 +70,14 @@ if st.session_state.page == "home":
     st.subheader("Macro‑Especialidades")
 
     cols = st.columns(3)
+
     for i, macro in enumerate(MACRO_MAP.keys()):
         with cols[i % 3]:
             if st.button(macro, key=f"macro_{i}"):
                 st.session_state.page = "macro"
                 st.session_state.macro = macro
 
-# MACRO
+# -------- MACRO --------
 elif st.session_state.page == "macro":
 
     macro = st.session_state.macro
@@ -79,9 +86,11 @@ elif st.session_state.page == "macro":
         st.session_state.page = "home"
 
     st.header(macro)
+
     filter_ana = st.checkbox("Mostrar apenas Fornecedores ANA")
 
     for spec in MACRO_MAP[macro]:
+
         subset = df[df[spec] == 1]
         if filter_ana:
             subset = subset[subset["ANA"] == 1]
@@ -94,10 +103,10 @@ elif st.session_state.page == "macro":
             company_row(row, btn_key_suffix=f"{macro}_{spec}")
 
     st.markdown("---")
-    if st.button("⬅ Voltar", key="bottom_back"):
+    if st.button("⬅ Voltar", key="back_macro_bottom"):
         st.session_state.page = "home"
 
-# GENERALISTAS
+# -------- GENERALISTAS --------
 elif st.session_state.page == "generalistas":
 
     if st.button("⬅ Voltar"):
@@ -114,6 +123,7 @@ elif st.session_state.page == "generalistas":
     subset = subset.sort_values("Nome")
 
     for _, row in subset.iterrows():
+
         st.subheader(row["Nome"])
 
         macros = [m for m, specs in MACRO_MAP.items() if row[specs].sum() > 0]
@@ -128,11 +138,5 @@ elif st.session_state.page == "generalistas":
             st.session_state["profile_row_index"] = row.name
 
     st.markdown("---")
-    if st.button("⬅ Voltar", key="btn_back_gen"):
+    if st.button("⬅ Voltar", key="back_gen_bottom"):
         st.session_state.page = "home"
-
-# SIDEBAR PERFIL (siempre al final)
-if "profile_row_index" in st.session_state:
-    idx = st.session_state["profile_row_index"]
-    if idx in df.index:
-        show_company_sidebar(df.loc[idx])
